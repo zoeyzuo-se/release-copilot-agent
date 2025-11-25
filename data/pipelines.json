@@ -1,0 +1,21 @@
+[
+    {
+        "service": "payments",
+        "environment": "prod",
+        "pipeline_id": "pipe-123",
+        "status": "failed",
+        "branch": "main",
+        "started_at": "2025-11-20T22:00:00Z",
+        "finished_at": "2025-11-20T22:05:32Z",
+        "failed_job_id": "job-789"
+    },
+    {
+        "service": "checkout",
+        "environment": "prod",
+        "pipeline_id": "pipe-124",
+        "status": "succeeded",
+        "branch": "main",
+        "started_at": "2025-11-20T22:15:00Z",
+        "finished_at": "2025-11-20T22:19:12Z"
+    }
+]
