@@ -1,0 +1,2 @@
+- created uv project (https://docs.astral.sh/uv/guides/projects/#pyprojecttoml)
+- dev container with mount az login
