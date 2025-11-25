@@ -1,10 +1,11 @@
-.PHONY: install run clean help
+.PHONY: install run chat clean help
 
 help:
 	@echo "Available commands:"
 	@echo "  make install    - Sync dependencies from pyproject.toml"
 	@echo "  make add PKG=<package>  - Add a new package (e.g., make add PKG=fastapi)"
 	@echo "  make run        - Run the application"
+	@echo "  make chat       - Start the Release Copilot CLI chat"
 	@echo "  make clean      - Clean up cache and temporary files"
 
 install:
@@ -17,6 +18,9 @@ add:
 
 run:
 	uv run python main.py
+
+chat:
+	uv run python -m rc_agent.app.cli_chat
 
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +
