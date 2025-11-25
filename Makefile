@@ -9,6 +9,7 @@ help:
 
 install:
 	uv sync
+	uv pip install -e .
 
 add:
 	@test -n "$(PKG)" || (echo "Usage: make add PKG=package-name" && exit 1)
