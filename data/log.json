@@ -1,0 +1,27 @@
+{
+    "job-789": [
+        "[2025-11-20T22:02:01Z] Starting deploy to prod...",
+        "[2025-11-20T22:02:05Z] Fetching container image: registry.azurecr.io/payments:v1.82",
+        "[2025-11-20T22:02:08Z] Image pulled successfully.",
+        "[2025-11-20T22:02:15Z] Running Helm upgrade...",
+        "[2025-11-20T22:02:40Z] Waiting for deployment rollout...",
+        "[2025-11-20T22:03:10Z] Warning: Pod payments-api-7f8d9c99b7-abcde not ready (0/1).",
+        "[2025-11-20T22:03:15Z] Warning: Health checks failing on readiness probe.",
+        "[2025-11-20T22:03:18Z] Error: Deployment stuck waiting for rollout to finish.",
+        "[2025-11-20T22:03:30Z] 🚨 ERROR: DEPLOY_TIMEOUT after 120s — Helm upgrade did not complete.",
+        "[2025-11-20T22:03:30Z] Suggestion: Check cluster health, node availability, and probe configs.",
+        "[2025-11-20T22:03:32Z] Job failed."
+    ],
+    "job-456": [
+        "[2025-11-21T18:01:11Z] Starting unit tests...",
+        "[2025-11-21T18:01:15Z] Test suite initiated.",
+        "[2025-11-21T18:01:16Z] ERROR: Connection refused when attempting to reach test DB.",
+        "[2025-11-21T18:01:17Z] ERROR: FAILED_TO_CONNECT_TO_DB",
+        "[2025-11-21T18:01:19Z] Tests aborted."
+    ],
+    "job-999": [
+        "[2025-11-22T10:10:05Z] Building Docker image...",
+        "[2025-11-22T10:10:20Z] Error: Cannot find Dockerfile at /src/app/",
+        "[2025-11-22T10:10:20Z] Build failed (DOCKERFILE_MISSING)."
+    ]
+}
