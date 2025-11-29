@@ -9,7 +9,8 @@ dependencies = [
     "agent-framework==1.0.0b251120",
     "azure-identity==1.25.1",
     "openai==2.8.1",
-    "python-dotenv==1.2.1"
+    "python-dotenv==1.2.1",
+    "agent-framework-devui>=1.0.0b251120",
 ]
 
 [build-system]

@@ -1,5 +1,6 @@
 import asyncio
 import sys
+from agent_framework.observability import setup_observability
 from rc_agent.agents.release_copilot_agent import create_release_copilot_agent
 
 
@@ -20,6 +21,10 @@ async def main():
     """Interactive CLI chat with the Release Copilot agent."""
     print("Release Copilot - CI/CD Assistant")
     print("Type 'exit' to quit\n")
+
+    # Enable Agent Framework observability with console exporter
+    # This allows seeing tool arguments, results, and agent reasoning
+    setup_observability(enable_sensitive_data=True)
 
     # Create the agent
     agent = create_release_copilot_agent()
