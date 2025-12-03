@@ -1,12 +1,19 @@
-# Release Copilot Agent - Multi-Agent CI/CD Assistant
+# Release Copilot Agent - CI/CD Assistant
 
-This project demonstrates a **multi-agent workflow** built with Microsoft Agent Framework in Python. It showcases how to create an orchestrated system where specialized agents collaborate to handle CI/CD deployment queries, including pipeline status checks and log analysis.
+This project demonstrates **two architectural approaches** for building AI agents with Microsoft Agent Framework in Python:
+
+1. **Multi-Agent Architecture** - Coordinator with specialist sub-agents
+2. **MCP (Model Context Protocol) Architecture** - Single agent with MCP tools
+
+Both approaches handle CI/CD deployment queries, including pipeline status checks and log analysis.
+
+> **📘 See [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md) for detailed comparison and migration instructions**
 
 ## Architecture Overview
 
-### Multi-Agent Workflow Structure
+### Approach 1: Multi-Agent Workflow (Legacy)
 
-The system uses a **coordinator pattern** with three specialized agents:
+The multi-agent system uses a **coordinator pattern** with three specialized agents:
 
 ```
 User Query
@@ -43,6 +50,39 @@ Coordinator Agent (Orchestrator)
 - Explains failures, errors, and suggests fixes
 - Tool: `get_job_logs(job_id)`
 
+### Approach 2: MCP Architecture (Recommended)
+
+The MCP system uses a **single agent with MCP tools**:
+
+```
+User Query
+    |
+    v
+MCP Orchestrator Agent
+    |
+    |-- Calls --> get_pipeline_status (MCP Tool)
+    |                   |
+    |                   |-- MCP Server --> PipelineService
+    |
+    |-- Calls --> get_job_logs (MCP Tool)
+                        |
+                        |-- MCP Server --> LogsService
+```
+
+**Benefits:**
+- ✅ Simpler architecture (1 agent vs 3)
+- ✅ Better performance (direct tool calls)
+- ✅ Standard protocol (MCP)
+- ✅ Easier to test and maintain
+
+**Files:**
+- `src/rc_agent/agents/mcp_orchestrator.py` - MCP-based coordinator
+- `src/rc_agent/mcp/pipeline_mcp_server.py` - Pipeline MCP server
+- `src/rc_agent/mcp/job_logs_mcp_server.py` - Logs MCP server
+- `examples/mcp_usage_example.py` - Usage examples
+
+> **📘 See [MCP_CONFIG.md](MCP_CONFIG.md) for MCP configuration details**
+
 ### Services Layer
 
 **PipelineService** (`services/pipeline_service.py`)
@@ -64,10 +104,15 @@ release-copilot-agent/
 │   └── post_create.sh          # Auto-install Azure CLI
 ├── src/
 │   └── rc_agent/
-│       ├── agents/             # Multi-agent system
-│       │   ├── orchestrator.py          # Coordinator agent
-│       │   ├── pipeline_status_agent.py # Pipeline specialist
-│       │   └── job_logs_analyzer_agent.py # Logs specialist
+│       ├── agents/             # Agent implementations
+│       │   ├── orchestrator.py          # Multi-agent coordinator (legacy)
+│       │   ├── mcp_orchestrator.py      # MCP coordinator (recommended)
+│       │   ├── pipeline_status_agent.py # Pipeline specialist (multi-agent)
+│       │   ├── job_logs_analyzer_agent.py # Logs specialist (multi-agent)
+│       │   └── release_copilot_agent.py # Single agent (simple approach)
+│       ├── mcp/                # MCP servers (new)
+│       │   ├── pipeline_mcp_server.py   # Pipeline status MCP server
+│       │   └── job_logs_mcp_server.py   # Job logs MCP server
 │       ├── services/           # Data access layer
 │       │   ├── pipeline_service.py
 │       │   └── logs_service.py
@@ -80,7 +125,11 @@ release-copilot-agent/
 ├── data/                       # Sample data files
 │   ├── pipelines.json          # Pipeline status data
 │   └── log.json                # Job execution logs
+├── examples/                   # Usage examples
+│   └── mcp_usage_example.py    # MCP orchestrator example
 ├── traces/                     # OpenTelemetry trace files
+├── MCP_CONFIG.md               # MCP configuration guide
+├── MIGRATION_GUIDE.md          # Multi-agent to MCP migration guide
 ├── test_multi_agent.py         # Multi-agent workflow tests
 ├── test_logs_agent.py          # Logs agent test
 ├── view_traces.py              # Trace viewer utility
@@ -174,7 +223,44 @@ This runs:
 
 ## Running the Application
 
-### Interactive CLI Chat
+### Option 1: FastAPI REST API (Recommended for Integration)
+
+Start the API server:
+
+```bash
+make api
+# API will be available at http://localhost:8000
+# Docs at http://localhost:8000/docs
+```
+
+Use the API client:
+
+```bash
+make api-client
+# or
+python examples/api_client_example.py
+```
+
+See [API_README.md](API_README.md) for complete API documentation.
+
+### Option 2: MCP Orchestrator (Direct Usage)
+
+Run the MCP-based orchestrator example:
+
+```bash
+python examples/mcp_usage_example.py
+```
+
+Or use it in your own code:
+
+```python
+from rc_agent.agents.mcp_orchestrator import create_mcp_orchestrator
+
+agent = create_mcp_orchestrator()
+result = await agent.run("What's the status of payments in prod?")
+```
+
+### Option 3: Multi-Agent Architecture (Legacy)
 
 Start the multi-agent CLI assistant:
 
@@ -193,7 +279,7 @@ Agent: [Coordinator routes to Job Logs Analyzer Agent]
        The logs show that job-789 failed during the build step...
 ```
 
-### Development UI (AI Toolkit)
+### Option 4: Development UI (AI Toolkit)
 
 Launch the AI Toolkit development UI for interactive agent testing:
 
@@ -212,8 +298,11 @@ This starts the AI Toolkit UI where you can:
 
 | Technology | Purpose |
 |------------|---------|
+| **FastAPI** | REST API framework for programmatic access |
+| **Uvicorn** | ASGI server for the API |
 | **uv** | Fast Python package manager (replaces pip) |
 | **Microsoft Agent Framework** | Build AI agents with function calling |
+| **MCP (Model Context Protocol)** | Standard protocol for AI tool integration |
 | **Azure OpenAI** | LLM backend with DefaultAzureCredential |
 | **python-dotenv** | Load environment variables from `.env` |
 | **Pydantic** | Type validation for function parameters |
@@ -225,7 +314,20 @@ This starts the AI Toolkit UI where you can:
 # Install/sync dependencies
 make install
 
-# Run the interactive CLI
+# Start the FastAPI REST API server (recommended for integration)
+make api
+# or
+python src/rc_agent/app/api.py
+
+# Test the API with the client example
+make api-client
+# or
+python examples/api_client_example.py
+
+# Run MCP orchestrator example
+python examples/mcp_usage_example.py
+
+# Run multi-agent CLI (legacy)
 python src/rc_agent/app/cli_chat.py
 
 # Launch AI Toolkit development UI
@@ -235,6 +337,10 @@ make devui
 python test_multi_agent.py
 python test_logs_agent.py
 
+# Test MCP servers independently
+python src/rc_agent/mcp/pipeline_mcp_server.py
+python src/rc_agent/mcp/job_logs_mcp_server.py
+
 # View traces
 python view_traces.py --summary
 
@@ -243,6 +349,28 @@ make clean
 ```
 
 ## How the Multi-Agent System Works
+
+> **Note:** This section describes the multi-agent architecture. For MCP architecture, see [MCP_CONFIG.md](MCP_CONFIG.md)
+
+## Choosing the Right Architecture
+
+### Use MCP When:
+✅ Tools provide simple data retrieval or transformation  
+✅ You want fast, direct tool execution  
+✅ Tools are stateless operations  
+✅ You want standard protocol integration  
+✅ Performance and simplicity are priorities  
+
+**→ Recommended for most use cases, including this project**
+
+### Use Multi-Agent When:
+✅ Specialists need complex reasoning and decision-making  
+✅ Each specialist has its own conversation context  
+✅ Specialists need to maintain state across interactions  
+✅ You need agents to collaborate and negotiate  
+✅ Each specialist requires different model configurations  
+
+**→ Better for complex collaborative agent scenarios**
 
 ### 1. Agent Delegation Pattern
 
