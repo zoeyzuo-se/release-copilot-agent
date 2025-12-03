@@ -1,4 +1,4 @@
-.PHONY: install run chat devui clean help
+.PHONY: install run chat devui api api-client clean help
 
 help:
 	@echo "Available commands:"
@@ -7,6 +7,8 @@ help:
 	@echo "  make run        - Run the application"
 	@echo "  make chat       - Start the Release Copilot CLI chat"
 	@echo "  make devui      - Start the Release Copilot DevUI (web interface)"
+	@echo "  make api        - Start the Release Copilot API server (port 8000)"
+	@echo "  make api-client - Run the API client example"
 	@echo "  make clean      - Clean up cache and temporary files"
 
 install:
@@ -25,6 +27,15 @@ chat:
 
 devui:
 	uv run python -m rc_agent.app.devui_entry
+
+api:
+	@echo "Starting Release Copilot API server..."
+	@echo "API Documentation: http://localhost:8000/docs"
+	@echo "Health Check: http://localhost:8000/health"
+	uv run python src/rc_agent/app/api.py
+
+api-client:
+	uv run python examples/api_client_example.py
 
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +
