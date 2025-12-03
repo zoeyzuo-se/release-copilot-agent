@@ -1,65 +1,62 @@
 import asyncio
-import sys
-from agent_framework.observability import setup_observability
-from rc_agent.agents.release_copilot_agent import create_release_copilot_agent
-
-
-async def show_thinking_animation(task):
-    """Show a thinking animation while waiting for the agent response."""
-    frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
-    idx = 0
-    while not task.done():
-        sys.stdout.write(f"\rAgent is thinking {frames[idx]} ")
-        sys.stdout.flush()
-        idx = (idx + 1) % len(frames)
-        await asyncio.sleep(0.1)
-    sys.stdout.write("\r" + " " * 30 + "\r")  # Clear the line
-    sys.stdout.flush()
+from agent_framework import RequestInfoEvent, WorkflowOutputEvent
+from rc_agent.agents.orchestrator import create_orchestrator
+from rc_agent.telemetry import init_tracing
 
 
 async def main():
-    """Interactive CLI chat with the Release Copilot agent."""
-    print("Release Copilot - CI/CD Assistant")
-    print("Type 'exit' to quit\n")
+    """Interactive CLI chat with the Release Copilot multi-agent workflow."""
+    # Initialize OpenTelemetry tracing
+    # This creates timestamped trace files in traces/ directory
+    init_tracing()
 
-    # Enable Agent Framework observability with console exporter
-    # This allows seeing tool arguments, results, and agent reasoning
-    setup_observability(enable_sensitive_data=True)
+    print("Release Copilot - CI/CD Multi-Agent Assistant")
+    print("=" * 60)
+    print("This system uses multiple specialized agents:")
+    print("  • Coordinator: Routes your queries to the right specialist")
+    print("  • Pipeline Status Agent: Provides deployment status info")
+    print("  • Job Logs Analyzer: Analyzes failures and errors")
+    print("\nType 'exit' or 'quit' to end the conversation.\n")
 
-    # Create the agent
-    agent = create_release_copilot_agent()
+    # Create the orchestrator workflow
+    workflow = create_orchestrator()
 
-    # Create a thread for conversation memory
-    thread = agent.get_new_thread()
+    # Get initial user input
+    user_input = input("You: ").strip()
 
-    # Chat loop
-    while True:
-        # Get user input
-        user_input = input("You: ").strip()
+    # Check for immediate exit
+    if user_input.lower() in ("exit", "quit"):
+        print("Goodbye!")
+        return
 
-        # Check for exit command
-        if user_input.lower() == "exit":
-            print("Goodbye!")
-            break
+    # Run the workflow with streaming to observe events
+    try:
+        async for event in workflow.run_stream(user_input):
+            # Handle workflow outputs (responses from agents)
+            if isinstance(event, WorkflowOutputEvent):
+                # This is the final response from a specialist or coordinator
+                messages = event.data
+                if messages:
+                    # Get the last assistant message
+                    for msg in reversed(messages):
+                        if msg.role.value == "assistant" and msg.text:
+                            print(f"\nAgent: {msg.text}\n")
+                            break
 
-        # Skip empty input
-        if not user_input:
-            continue
+            # Handle requests for user input (continuation of conversation)
+            elif isinstance(event, RequestInfoEvent):
+                user_input = input("You: ").strip()
 
-        # Send message to agent and get response
-        try:
-            # Create task for agent response
-            agent_task = asyncio.create_task(
-                agent.run(user_input, thread=thread))
+                # Check for exit
+                if user_input.lower() in ("exit", "quit"):
+                    print("Goodbye!")
+                    return
 
-            # Show thinking animation while waiting
-            await show_thinking_animation(agent_task)
+                # Send user response back to workflow
+                await workflow.send_response(event.data.request_id, user_input)
 
-            # Get the result
-            result = await agent_task
-            print(f"Agent: {result.text}\n")
-        except Exception as e:
-            print(f"Error: {e}\n")
+    except Exception as e:
+        print(f"Error: {e}\n")
 
 
 if __name__ == "__main__":
