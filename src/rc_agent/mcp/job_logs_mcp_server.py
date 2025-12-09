@@ -1,46 +1,23 @@
-"""MCP Server for Job Logs Tool."""
+"""FastMCP Server for Job Logs Tool."""
 
 import json
-from typing import Any
-from mcp.server import Server
-from mcp.server.stdio import stdio_server
-from mcp.types import Tool, TextContent
+from fastmcp import FastMCP
 from rc_agent.config.settings import settings
 
-
-# Create MCP server instance
-app = Server("job-logs-server")
-
-
-@app.list_tools()
-async def list_tools() -> list[Tool]:
-    """List available tools."""
-    return [
-        Tool(
-            name="get_job_logs",
-            description="Get the logs from a specific job to understand what happened during execution",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "job_id": {
-                        "type": "string",
-                        "description": "The job ID to retrieve logs for (e.g., 'job-789')"
-                    }
-                },
-                "required": ["job_id"]
-            }
-        )
-    ]
+# Create FastMCP server instance
+mcp = FastMCP("job-logs-server")
 
 
-@app.call_tool()
-async def call_tool(name: str, arguments: Any) -> list[TextContent]:
-    """Handle tool calls."""
-    if name != "get_job_logs":
-        raise ValueError(f"Unknown tool: {name}")
+def _get_job_logs_impl(job_id: str) -> dict:
+    """
+    Implementation of get_job_logs tool.
 
-    job_id = arguments.get("job_id")
+    Args:
+        job_id: The job ID to retrieve logs for (e.g., 'job-789')
 
+    Returns:
+        dict: Job logs information
+    """
     # Read logs data
     logs_file = settings.data_dir / "log.json"
 
@@ -48,44 +25,46 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent]:
         with open(logs_file, 'r') as f:
             all_logs = json.load(f)
     except FileNotFoundError:
-        return [TextContent(
-            type="text",
-            text=json.dumps({
-                "found": False,
-                "error": "Logs data file not found"
-            })
-        )]
+        return {
+            "found": False,
+            "error": "Logs data file not found"
+        }
 
     # Look up the job logs
     if job_id in all_logs:
         logs = all_logs[job_id]
-        result = {
+        return {
             "found": True,
             "job_id": job_id,
             "logs": logs
         }
-        return [TextContent(type="text", text=json.dumps(result))]
 
     # Job not found
-    return [TextContent(
-        type="text",
-        text=json.dumps({
-            "found": False,
-            "message": f"No logs found for job '{job_id}'"
-        })
-    )]
+    return {
+        "found": False,
+        "message": f"No logs found for job '{job_id}'"
+    }
 
 
-async def main():
-    """Run the MCP server."""
-    async with stdio_server() as (read_stream, write_stream):
-        await app.run(
-            read_stream,
-            write_stream,
-            app.create_initialization_options()
-        )
+# Expose as plain function for direct imports
+get_job_logs = _get_job_logs_impl
+
+
+# Register as FastMCP tool
+@mcp.tool()
+def get_job_logs_tool(job_id: str) -> dict:
+    """
+    Get the logs from a specific job to understand what happened during execution.
+
+    Args:
+        job_id: The job ID to retrieve logs for (e.g., 'job-789')
+
+    Returns:
+        dict: Job logs information
+    """
+    return _get_job_logs_impl(job_id)
 
 
 if __name__ == "__main__":
-    import asyncio
-    asyncio.run(main())
+    # Run with SSE transport on HTTP
+    mcp.run(transport="sse", port=8002)

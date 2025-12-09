@@ -9,6 +9,7 @@ help:
 	@echo "  make devui      - Start the Release Copilot DevUI (web interface)"
 	@echo "  make api        - Start the Release Copilot API server (port 8000)"
 	@echo "  make api-client - Run the API client example"
+	@echo "  make mcp-servers - Start both FastMCP servers (ports 8001, 8002)"
 	@echo "  make clean      - Clean up cache and temporary files"
 
 install:
@@ -36,6 +37,10 @@ api:
 
 api-client:
 	uv run python examples/api_client_example.py
+
+mcp-servers:
+	@echo "Starting FastMCP servers with HTTP/SSE transport..."
+	uv run python run_mcp_servers.py
 
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +

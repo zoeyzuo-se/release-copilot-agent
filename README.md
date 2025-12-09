@@ -1,58 +1,14 @@
 # Release Copilot Agent - CI/CD Assistant
 
-This project demonstrates **two architectural approaches** for building AI agents with Microsoft Agent Framework in Python:
+This project demonstrates building AI agents with Microsoft Agent Framework in Python using **FastMCP** for tool integration.
 
-1. **Multi-Agent Architecture** - Coordinator with specialist sub-agents
-2. **MCP (Model Context Protocol) Architecture** - Single agent with MCP tools
-
-Both approaches handle CI/CD deployment queries, including pipeline status checks and log analysis.
-
-> **📘 See [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md) for detailed comparison and migration instructions**
+The agent helps with CI/CD deployment queries, including pipeline status checks and log analysis.
 
 ## Architecture Overview
 
-### Approach 1: Multi-Agent Workflow (Legacy)
+The system uses **FastMCP tools** with a single orchestrator agent:
 
-The multi-agent system uses a **coordinator pattern** with three specialized agents:
-
-```
-User Query
-    |
-    v
-Coordinator Agent (Orchestrator)
-    |
-    |-- Routes to --> Pipeline Status Agent
-    |                   |
-    |                   |-- Uses --> PipelineService (data access)
-    |                   |-- Tool --> get_pipeline_status()
-    |
-    |-- Routes to --> Job Logs Analyzer Agent
-                        |
-                        |-- Uses --> LogsService (data access)
-                        |-- Tool --> get_job_logs()
-```
-
-### Agent Responsibilities
-
-**1. Coordinator Agent** (`orchestrator.py`)
-- Routes user queries to appropriate specialist agents
-- Orchestrates multi-agent conversations
-- Presents specialist responses to users
-- Tools: `consult_pipeline_status_agent`, `consult_job_logs_agent`
-
-**2. Pipeline Status Agent** (`pipeline_status_agent.py`)
-- Specialist for deployment pipeline status queries
-- Provides current pipeline state, branch info, timestamps
-- Tool: `get_pipeline_status(service, environment)`
-
-**3. Job Logs Analyzer Agent** (`job_logs_analyzer_agent.py`)
-- Specialist for analyzing job execution logs
-- Explains failures, errors, and suggests fixes
-- Tool: `get_job_logs(job_id)`
-
-### Approach 2: MCP Architecture (Recommended)
-
-The MCP system uses a **single agent with MCP tools**:
+![Architecture Diagram](assets/AF.drawio.png)
 
 ```
 User Query
@@ -60,40 +16,32 @@ User Query
     v
 MCP Orchestrator Agent
     |
-    |-- Calls --> get_pipeline_status (MCP Tool)
+    |-- Calls --> get_pipeline_status (FastMCP Tool)
     |                   |
-    |                   |-- MCP Server --> PipelineService
+    |                   |-- Reads --> data/pipelines.json
     |
-    |-- Calls --> get_job_logs (MCP Tool)
+    |-- Calls --> get_job_logs (FastMCP Tool)
                         |
-                        |-- MCP Server --> LogsService
+                        |-- Reads --> data/log.json
 ```
 
 **Benefits:**
-- ✅ Simpler architecture (1 agent vs 3)
-- ✅ Better performance (direct tool calls)
-- ✅ Standard protocol (MCP)
-- ✅ Easier to test and maintain
+- ✅ Simple architecture (single agent)
+- ✅ Direct tool calls (fast performance)
+- ✅ FastMCP protocol (can host as HTTP/SSE servers)
+- ✅ Easy to test and maintain
 
-**Files:**
-- `src/rc_agent/agents/mcp_orchestrator.py` - MCP-based coordinator
-- `src/rc_agent/mcp/pipeline_mcp_server.py` - Pipeline MCP server
-- `src/rc_agent/mcp/job_logs_mcp_server.py` - Logs MCP server
+**Key Files:**
+- `src/rc_agent/agents/mcp_orchestrator.py` - Main orchestrator agent
+- `src/rc_agent/mcp/pipeline_mcp_server.py` - Pipeline tool (FastMCP)
+- `src/rc_agent/mcp/job_logs_mcp_server.py` - Logs tool (FastMCP)
 - `examples/mcp_usage_example.py` - Usage examples
 
-> **📘 See [MCP_CONFIG.md](MCP_CONFIG.md) for MCP configuration details**
+### Data Access
 
-### Services Layer
-
-**PipelineService** (`services/pipeline_service.py`)
-- Data access for pipeline information
-- Reads from `data/pipelines.json`
-- Method: `get_pipeline_status(service, environment)`
-
-**LogsService** (`services/logs_service.py`)
-- Data access for job execution logs
-- Reads from `data/log.json`
-- Method: `get_job_logs(job_id)`
+Tools read directly from JSON data files:
+- `data/pipelines.json` - Pipeline status data
+- `data/log.json` - Job execution logs
 
 ## Project Structure
 
@@ -105,15 +53,11 @@ release-copilot-agent/
 ├── src/
 │   └── rc_agent/
 │       ├── agents/             # Agent implementations
-│       │   ├── orchestrator.py          # Multi-agent coordinator (legacy)
-│       │   ├── mcp_orchestrator.py      # MCP coordinator (recommended)
-│       │   ├── pipeline_status_agent.py # Pipeline specialist (multi-agent)
-│       │   ├── job_logs_analyzer_agent.py # Logs specialist (multi-agent)
-│       │   └── release_copilot_agent.py # Single agent (simple approach)
-│       ├── mcp/                # MCP servers (new)
-│       │   ├── pipeline_mcp_server.py   # Pipeline status MCP server
-│       │   └── job_logs_mcp_server.py   # Job logs MCP server
-│       ├── services/           # Data access layer
+│       │   └── mcp_orchestrator.py      # Main orchestrator with FastMCP tools
+│       ├── mcp/                # FastMCP tool servers
+│       │   ├── pipeline_mcp_server.py   # Pipeline status tool
+│       │   └── job_logs_mcp_server.py   # Job logs tool
+│       ├── services/           # Data access layer (legacy)
 │       │   ├── pipeline_service.py
 │       │   └── logs_service.py
 │       ├── telemetry/          # OpenTelemetry tracing
@@ -121,17 +65,18 @@ release-copilot-agent/
 │       ├── config/             # Settings management
 │       │   └── settings.py
 │       └── app/                # Application entry points
-│           └── cli_chat.py     # Interactive CLI
+│           ├── api.py          # FastAPI REST API
+│           ├── cli_chat.py     # Interactive CLI (legacy multi-agent)
+│           └── devui_entry.py  # AI Toolkit DevUI
 ├── data/                       # Sample data files
 │   ├── pipelines.json          # Pipeline status data
 │   └── log.json                # Job execution logs
 ├── examples/                   # Usage examples
-│   └── mcp_usage_example.py    # MCP orchestrator example
+│   ├── mcp_usage_example.py    # MCP orchestrator example
+│   └── api_client_example.py   # API client example
 ├── traces/                     # OpenTelemetry trace files
-├── MCP_CONFIG.md               # MCP configuration guide
-├── MIGRATION_GUIDE.md          # Multi-agent to MCP migration guide
-├── test_multi_agent.py         # Multi-agent workflow tests
-├── test_logs_agent.py          # Logs agent test
+├── run_mcp_servers.py          # Helper to run MCP servers as HTTP/SSE
+├── test_mcp_http.py            # Test FastMCP tools
 ├── view_traces.py              # Trace viewer utility
 ├── pyproject.toml              # Python project & dependencies
 ├── Makefile                    # Common commands
@@ -167,7 +112,6 @@ python view_traces.py            # Full trace details
 ```bash
 git clone https://github.com/zoeyzuo-se/release-copilot-agent.git
 cd release-copilot-agent
-git checkout engineering-fundamentals
 ```
 
 ### Step 2: Set Up Azure Authentication
@@ -236,15 +180,13 @@ make api
 Use the API client:
 
 ```bash
+```bash
 make api-client
 # or
 python examples/api_client_example.py
 ```
 
-See [API_README.md](API_README.md) for complete API documentation.
-
 ### Option 2: MCP Orchestrator (Direct Usage)
-
 Run the MCP-based orchestrator example:
 
 ```bash
@@ -255,33 +197,14 @@ Or use it in your own code:
 
 ```python
 from rc_agent.agents.mcp_orchestrator import create_mcp_orchestrator
+```python
+from rc_agent.agents.mcp_orchestrator import create_mcp_orchestrator
 
 agent = create_mcp_orchestrator()
 result = await agent.run("What's the status of payments in prod?")
 ```
 
-### Option 3: Multi-Agent Architecture (Legacy)
-
-Start the multi-agent CLI assistant:
-
-```bash
-python src/rc_agent/app/cli_chat.py
-```
-
-Example interactions:
-```
-You: What is the status of the payments service in prod?
-Agent: [Coordinator routes to Pipeline Status Agent]
-       The payments service pipeline in production has failed...
-
-You: Can you analyze the logs for job-789?
-Agent: [Coordinator routes to Job Logs Analyzer Agent]
-       The logs show that job-789 failed during the build step...
-```
-
-### Option 4: Development UI (AI Toolkit)
-
-Launch the AI Toolkit development UI for interactive agent testing:
+### Option 3: Development UI (AI Toolkit)interactive agent testing:
 
 ```bash
 make devui
@@ -292,6 +215,20 @@ This starts the AI Toolkit UI where you can:
 - View real-time agent conversations
 - Inspect tool calls and LLM responses
 - Debug agent behavior with visual feedback
+
+### Option 4: FastMCP HTTP/SSE Servers (Optional)
+
+Run FastMCP tools as remote HTTP/SSE servers:
+
+```bash
+| **FastAPI** | REST API framework for programmatic access |
+| **Uvicorn** | ASGI server for the API |
+| **uv** | Fast Python package manager (replaces pip) |
+| **Microsoft Agent Framework** | Build AI agents with function calling |
+| **FastMCP** | Fast Model Context Protocol for tool integration |
+| **Azure OpenAI** | LLM backend with DefaultAzureCredential |
+| **python-dotenv** | Load environment variables from `.env` |
+| **Pydantic** | Type validation for function parameters |protocol.
 
 
 ## Key Technologies
@@ -306,36 +243,23 @@ This starts the AI Toolkit UI where you can:
 | **Azure OpenAI** | LLM backend with DefaultAzureCredential |
 | **python-dotenv** | Load environment variables from `.env` |
 | **Pydantic** | Type validation for function parameters |
-
-
-## Common Commands
-
-```bash
-# Install/sync dependencies
-make install
-
-# Start the FastAPI REST API server (recommended for integration)
-make api
-# or
-python src/rc_agent/app/api.py
-
-# Test the API with the client example
-make api-client
-# or
-python examples/api_client_example.py
+This starts the AI Toolkit UI where you can:
+- Test the agent interactively
+- View real-time conversations
+- Inspect tool calls and LLM responses
+- Debug agent behavior with visual feedback
 
 # Run MCP orchestrator example
 python examples/mcp_usage_example.py
 
-# Run multi-agent CLI (legacy)
-python src/rc_agent/app/cli_chat.py
-
 # Launch AI Toolkit development UI
 make devui
 
-# Run multi-agent tests
-python test_multi_agent.py
-python test_logs_agent.py
+# Run FastMCP servers as HTTP/SSE (optional)
+make mcp-servers
+
+# Test FastMCP tools
+python test_mcp_http.py
 
 # Test MCP servers independently
 python src/rc_agent/mcp/pipeline_mcp_server.py
@@ -348,48 +272,7 @@ python view_traces.py --summary
 make clean
 ```
 
-## How the Multi-Agent System Works
-
-> **Note:** This section describes the multi-agent architecture. For MCP architecture, see [MCP_CONFIG.md](MCP_CONFIG.md)
-
-## Choosing the Right Architecture
-
-### Use MCP When:
-✅ Tools provide simple data retrieval or transformation  
-✅ You want fast, direct tool execution  
-✅ Tools are stateless operations  
-✅ You want standard protocol integration  
-✅ Performance and simplicity are priorities  
-
-**→ Recommended for most use cases, including this project**
-
-### Use Multi-Agent When:
-✅ Specialists need complex reasoning and decision-making  
-✅ Each specialist has its own conversation context  
-✅ Specialists need to maintain state across interactions  
-✅ You need agents to collaborate and negotiate  
-✅ Each specialist requires different model configurations  
-
-**→ Better for complex collaborative agent scenarios**
-
-### 1. Agent Delegation Pattern
-
-The coordinator agent uses specialist agents as **async function tools**:
-
-```python
-@ai_function
-async def call_pipeline_agent(query: str) -> str:
-    result = await pipeline_agent.run(query)
-    return result.text
-```
-
-This creates a true multi-agent workflow where:
-- Multiple agents run independently with their own LLM calls
-- Each agent has specialized instructions and capabilities
-- The coordinator explicitly delegates to and waits for specialists
-- Tracing shows multiple agent invocations
-
-### 2. Query Routing
+## How It Worksting
 
 The coordinator analyzes user queries and routes them:
 
@@ -459,6 +342,74 @@ Authentication uses `DefaultAzureCredential` from Azure Identity, which supports
 2. **Multi-Agent Orchestration**: Coordinator pattern with specialist delegation
 3. **Observability**: Comprehensive OpenTelemetry tracing
 4. **Type Safety**: Pydantic models and type hints throughout
-5. **Clean Architecture**: Services layer abstracts data access from agent logic
-6. **Development Workflow**: Dev containers for consistent environments
+## How It Works
 
+The orchestrator agent uses two FastMCP tools:
+
+1. **get_pipeline_status** - Checks deployment pipeline status
+   - Reads from `data/pipelines.json`
+   - Returns status, pipeline_id, branch, timestamps, and failed_job_id
+
+2. **get_job_logs** - Retrieves execution logs
+   - Reads from `data/log.json`
+   - Returns detailed log lines for analysis
+
+### Agent Workflow
+
+```
+User Query
+    ↓
+Orchestrator analyzes intent
+## Development Notes
+
+### FastMCP Tools
+
+Each tool has two modes:
+
+1. **Direct function call** (default) - Fast, in-process
+   ```python
+   from rc_agent.mcp.pipeline_mcp_server import get_pipeline_status
+   result = get_pipeline_status(service="payments", environment="prod")
+   ```
+
+2. **HTTP/SSE server** (optional) - For remote deployment
+   ```bash
+   python src/rc_agent/mcp/pipeline_mcp_server.py  # Runs on port 8001
+   ```
+
+### Adding New Tools
+
+1. Create tool function in `src/rc_agent/mcp/`
+2. Use `@mcp.tool()` decorator for HTTP/SSE hosting
+3. Export plain function for direct imports
+4. Add to orchestrator's tools list
+
+### Tracing Configuration
+
+Tracing is initialized in `src/rc_agent/telemetry/otel.py`:
+- Automatic timestamped trace files in `traces/`
+- Captures agent invocations, tool calls, and LLM requests
+- View with `python view_traces.py --summary`
+
+### Environment Variables
+
+Required in `.env`:
+```env
+AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
+AZURE_OPENAI_DEPLOYMENT=gpt-4o-mini
+```
+
+Authentication uses `DefaultAzureCredential` from Azure Identity, which supports:
+- Azure CLI credentials (recommended for local dev)
+- Managed Identity (for production)
+- Environment variables
+- Interactive browser authentication
+
+## Best Practices Demonstrated
+
+1. **FastMCP Integration**: Clean tool definitions with dual-mode support (in-process + HTTP/SSE)
+2. **Type Safety**: Pydantic models and type hints throughout
+3. **Observability**: Comprehensive OpenTelemetry tracing
+4. **Clean Architecture**: Separation of tools, agents, and configuration
+5. **Development Workflow**: Dev containers for consistent environments
+6. **Flexibility**: Tools can run in-process or as remote services

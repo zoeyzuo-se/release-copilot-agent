@@ -1,0 +1,105 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "DevUI (AI Toolkit)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "rc_agent.app.devui_entry",
+            "justMyCode": false,
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src"
+            },
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "FastAPI Server",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "uvicorn",
+            "args": [
+                "rc_agent.app.api:app",
+                "--host",
+                "0.0.0.0",
+                "--port",
+                "8000",
+                "--reload"
+            ],
+            "justMyCode": false,
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src"
+            },
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "MCP Server - Pipeline",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/rc_agent/mcp/pipeline_mcp_server.py",
+            "justMyCode": false,
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src"
+            },
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "MCP Server - Job Logs",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/rc_agent/mcp/job_logs_mcp_server.py",
+            "justMyCode": false,
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src"
+            },
+            "console": "integratedTerminal"
+        }
+    ],
+    "compounds": [
+        {
+            "name": "All MCP Servers",
+            "configurations": [
+                "MCP Server - Pipeline",
+                "MCP Server - Job Logs"
+            ],
+            "stopAll": true,
+            "presentation": {
+                "hidden": false,
+                "group": "mcp",
+                "order": 1
+            }
+        },
+        {
+            "name": "Full Stack (DevUI + API + MCP)",
+            "configurations": [
+                "DevUI (AI Toolkit)",
+                "FastAPI Server",
+                "MCP Server - Pipeline",
+                "MCP Server - Job Logs"
+            ],
+            "stopAll": true,
+            "presentation": {
+                "hidden": false,
+                "group": "full",
+                "order": 1
+            }
+        },
+        {
+            "name": "API + MCP Servers",
+            "configurations": [
+                "FastAPI Server",
+                "MCP Server - Pipeline",
+                "MCP Server - Job Logs"
+            ],
+            "stopAll": true,
+            "presentation": {
+                "hidden": false,
+                "group": "api",
+                "order": 1
+            }
+        }
+    ]
+}
