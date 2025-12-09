@@ -1,7 +1,0 @@
-- created uv project (https://docs.astral.sh/uv/guides/projects/#pyprojecttoml)
-- dev container with mount az login
-- Use thread to enable multi-turn conversation
-- Added dev ui
-- Added OpenTelemetry tracing for agent, tools, and LLM calls
-- Next: wrap fastapi 
-- the console log of telemetry has made the cli conversation very hard - try to check if we can disable it

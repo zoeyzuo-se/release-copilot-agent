@@ -1,4 +1,4 @@
-"""Orchestrator using MCP-style tools instead of multi-agent architecture."""
+"""Orchestrator using FastMCP tools (can be local or will support remote via MCP client in future)."""
 
 from agent_framework import ChatAgent, ai_function
 from agent_framework.azure import AzureOpenAIChatClient
@@ -11,19 +11,19 @@ import json
 
 def create_mcp_orchestrator() -> ChatAgent:
     """
-    Create and return the orchestrator agent using MCP-style tools.
+    Create and return the orchestrator agent using FastMCP-style tools.
 
-    This coordinator agent uses tools directly instead of sub-agents.
-    The tools follow MCP principles: simple, focused, stateless operations.
+    This coordinator agent uses tools that wrap FastMCP server functions.
+    The tools are currently called directly in-process.
 
-    - Pipeline Status Tool: Provides pipeline status queries
-    - Job Logs Tool: Provides log analysis capabilities
+    For remote deployment, FastMCP servers can be hosted separately
+    and connected via MCP client (future enhancement).
 
     Architecture:
-        User → Orchestrator Agent → [Direct Tools] → Response
+        User → Orchestrator Agent → [Direct Tool Calls] → FastMCP Functions → Response
 
     Returns:
-        ChatAgent: A configured coordinator that uses direct tools
+        ChatAgent: A configured coordinator that uses FastMCP tools
     """
 
     # Create Azure OpenAI chat client for the coordinator
@@ -33,7 +33,11 @@ def create_mcp_orchestrator() -> ChatAgent:
         deployment_name=settings.deployment,
     )
 
-    # Define MCP-style tools (simple, focused, stateless)
+    # Import FastMCP tool functions
+    from rc_agent.mcp.pipeline_mcp_server import get_pipeline_status as pipeline_tool
+    from rc_agent.mcp.job_logs_mcp_server import get_job_logs as logs_tool
+
+    # Wrap FastMCP tools for agent framework
     @ai_function(
         name="get_pipeline_status",
         description="Get the status of a deployment pipeline for a specific service and environment"
@@ -43,33 +47,9 @@ def create_mcp_orchestrator() -> ChatAgent:
         environment: Annotated[str, Field(
             description="The environment (e.g., 'prod', 'staging')")]
     ) -> str:
-        """Get pipeline status from data file."""
-        pipelines_file = settings.data_dir / "pipelines.json"
-
-        try:
-            with open(pipelines_file, 'r') as f:
-                pipelines = json.load(f)
-        except FileNotFoundError:
-            return json.dumps({"found": False, "error": "Pipelines data file not found"})
-
-        # Search for matching pipeline
-        for pipeline in pipelines:
-            if pipeline.get("service") == service and pipeline.get("environment") == environment:
-                result = {
-                    "found": True,
-                    "status": pipeline.get("status"),
-                    "pipeline_id": pipeline.get("pipeline_id"),
-                    "branch": pipeline.get("branch"),
-                    "started_at": pipeline.get("started_at"),
-                    "finished_at": pipeline.get("finished_at"),
-                    "failed_job_id": pipeline.get("failed_job_id")
-                }
-                return json.dumps(result)
-
-        return json.dumps({
-            "found": False,
-            "message": f"No pipeline found for service '{service}' in environment '{environment}'"
-        })
+        """Get pipeline status using FastMCP tool."""
+        result = pipeline_tool(service=service, environment=environment)
+        return json.dumps(result)
 
     @ai_function(
         name="get_job_logs",
@@ -79,29 +59,9 @@ def create_mcp_orchestrator() -> ChatAgent:
         job_id: Annotated[str, Field(
             description="The job ID to retrieve logs for (e.g., 'job-789')")]
     ) -> str:
-        """Get job logs from data file."""
-        logs_file = settings.data_dir / "log.json"
-
-        try:
-            with open(logs_file, 'r') as f:
-                all_logs = json.load(f)
-        except FileNotFoundError:
-            return json.dumps({"found": False, "error": "Logs data file not found"})
-
-        # Look up the job logs
-        if job_id in all_logs:
-            logs = all_logs[job_id]
-            result = {
-                "found": True,
-                "job_id": job_id,
-                "logs": logs
-            }
-            return json.dumps(result)
-
-        return json.dumps({
-            "found": False,
-            "message": f"No logs found for job '{job_id}'"
-        })
+        """Get job logs using FastMCP tool."""
+        result = logs_tool(job_id=job_id)
+        return json.dumps(result)
 
     # Create the coordinator agent with direct tools
     coordinator = chat_client.create_agent(
