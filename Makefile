@@ -1,4 +1,4 @@
-.PHONY: install run devui api mcp-servers clean help
+.PHONY: install run devui api mcp-servers clean help eval-collect eval-run eval
 
 help:
 	@echo "Available commands:"
@@ -8,6 +8,9 @@ help:
 	@echo "  make devui       - Start the Release Copilot DevUI (web interface)"
 	@echo "  make api         - Start the Release Copilot API server (port 8000)"
 	@echo "  make mcp-servers - Start both FastMCP servers (ports 8001, 8002)"
+	@echo "  make eval-collect - Collect agent responses for evaluation"
+	@echo "  make eval-run    - Run evaluation on collected responses"
+	@echo "  make eval        - Run full evaluation (collect + evaluate)"
 	@echo "  make clean       - Clean up cache and temporary files"
 
 install:
@@ -33,6 +36,19 @@ api:
 mcp-servers:
 	@echo "Starting FastMCP servers with HTTP/SSE transport..."
 	uv run python run_mcp_servers.py
+
+eval-collect:
+	@echo "Collecting agent responses for evaluation..."
+	uv run python -m rc_agent.eval.collect_responses
+
+eval-run:
+	@echo "Running evaluation on collected responses..."
+	uv run python -m rc_agent.eval.evaluate
+
+eval:
+	@echo "Running full evaluation (collect + evaluate)..."
+	@$(MAKE) eval-collect
+	@$(MAKE) eval-run
 
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +

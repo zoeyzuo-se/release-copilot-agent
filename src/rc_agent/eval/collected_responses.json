@@ -1,0 +1,133 @@
+[
+  {
+    "test_case_id": 1,
+    "query": "What's the status of the payments service in production?",
+    "expected_tools": [
+      "get_pipeline_status"
+    ],
+    "expected_tool_args": {
+      "service": "payments",
+      "environment": "prod"
+    },
+    "actual_tool_calls": [
+      {
+        "id": "call_xCCG7b8JGlIX44Y4N3VNj2M4",
+        "name": "get_pipeline_status",
+        "arguments": {
+          "service": "payments",
+          "environment": "prod"
+        }
+      }
+    ],
+    "response": "Got it \u2014 let's check the status of the **payments** service in **production**.The latest deployment for the **payments** service in **production** has **failed**.  \n\nIt was triggered from the `main` branch, started at **22:00 UTC** and finished at **22:05 UTC** today.  \n\nDo you want me to check the logs for the failed job to see exactly what went wrong?",
+    "timestamp": "2025-12-09T12:03:44.696084"
+  },
+  {
+    "test_case_id": 2,
+    "query": "Why did the payments deployment to prod fail?",
+    "expected_tools": [
+      "get_pipeline_status",
+      "get_job_logs"
+    ],
+    "expected_tool_args": {
+      "service": "payments",
+      "environment": "prod",
+      "job_id": "job-789"
+    },
+    "actual_tool_calls": [
+      {
+        "id": "call_2R4S49teGlmJscB98MlONOco",
+        "name": "get_pipeline_status",
+        "arguments": {
+          "service": "payments",
+          "environment": "prod"
+        }
+      },
+      {
+        "id": "call_eiL0F2AI7WUp12tTariDi9fS",
+        "name": "get_job_logs",
+        "arguments": {
+          "job_id": "job-789"
+        }
+      }
+    ],
+    "response": "Got it \u2014 let's first check the pipeline status for the **payments** service in **prod** so we can find the failed job, then we\u2019ll dig into the logs to see exactly why it failed.The payments deployment to **prod** failed because the new application pods never passed their readiness checks.  \n\nHere\u2019s the sequence of events:\n- The deployment started fine: pulled the container image and initiated the Helm upgrade.\n- When rolling out the new version, at least one pod (`payments-api-7f8d9c99b7-abcde`) stayed \u201cnot ready\u201d \u2014 its **readiness probe** kept failing.\n- The pipeline waited for the rollout to succeed, but after 120 seconds, it timed out.\n- That timeout caused the job to fail.\n\n**In plain terms:** The deployment didn\u2019t finish because the new version of the payments service never became healthy enough to receive traffic. This could be due to misconfigured health check settings, a bug in startup, or cluster resource issues.\n\nDo you want me to help you look into **why** that readiness probe is failing? That could narrow down whether it\u2019s a configuration or code issue.",
+    "timestamp": "2025-12-09T12:03:49.897164"
+  },
+  {
+    "test_case_id": 3,
+    "query": "Can you show me the logs for job-789?",
+    "expected_tools": [
+      "get_job_logs"
+    ],
+    "expected_tool_args": {
+      "job_id": "job-789"
+    },
+    "actual_tool_calls": [
+      {
+        "id": "call_9ZYvQRhDAd599gTT7lVGqCYF",
+        "name": "get_job_logs",
+        "arguments": {
+          "job_id": "job-789"
+        }
+      }
+    ],
+    "response": "Sure! Let\u2019s pull up the logs for **job-789** so we can see exactly what happened.Here\u2019s what happened with **job-789**:\n\n- The deployment to **prod** started and successfully pulled the container image `payments:v1.82`.\n- Helm upgrade was triggered and the system waited for the rollout to finish.\n- One of the pods (`payments-api-7f8d9c99b7-abcde`) never became ready\u2014its readiness probe kept failing health checks.\n- Because of that, the deployment got stuck and eventually hit a **DEPLOY_TIMEOUT** after 120 seconds.\n- The logs suggest checking cluster health, node availability, and readiness probe configuration.\n\n**In simple terms:** The new version was pushed to the cluster, but one pod couldn\u2019t pass its health checks, so Kubernetes refused to mark the deployment as ready, causing it to time out.\n\nDo you want me to help investigate *why* that pod\u2019s health checks are failing so we can fix this?",
+    "timestamp": "2025-12-09T12:03:53.319769"
+  },
+  {
+    "test_case_id": 4,
+    "query": "What happened with the checkout service deployment in production?",
+    "expected_tools": [
+      "get_pipeline_status"
+    ],
+    "expected_tool_args": {
+      "service": "checkout",
+      "environment": "prod"
+    },
+    "actual_tool_calls": [
+      {
+        "id": "call_L7gFMoV2lgyWWfB7bI9mlMQ0",
+        "name": "get_pipeline_status",
+        "arguments": {
+          "service": "checkout",
+          "environment": "prod"
+        }
+      }
+    ],
+    "response": "Got it \u2014 let's check the production deployment status for the checkout service and see if anything went wrong.The production deployment for the **checkout** service completed successfully.  \nIt ran on the `main` branch from **22:15** to **22:19 UTC** and there were no failed jobs in the pipeline.  \n\nEverything looks good \u2014 no issues found!",
+    "timestamp": "2025-12-09T12:03:55.752355"
+  },
+  {
+    "test_case_id": 5,
+    "query": "Check the status of payments prod and tell me what went wrong",
+    "expected_tools": [
+      "get_pipeline_status",
+      "get_job_logs"
+    ],
+    "expected_tool_args": {
+      "service": "payments",
+      "environment": "prod",
+      "job_id": "job-789"
+    },
+    "actual_tool_calls": [
+      {
+        "id": "call_WWV0PrJKljB75njAdzpQ76ug",
+        "name": "get_pipeline_status",
+        "arguments": {
+          "service": "payments",
+          "environment": "prod"
+        }
+      },
+      {
+        "id": "call_2Yoo8h0P3jRR6rHfEXvKdv7A",
+        "name": "get_job_logs",
+        "arguments": {
+          "job_id": "job-789"
+        }
+      }
+    ],
+    "response": "Got it \u2014 let\u2019s first check the current deployment status for `payments` in `prod` and see if there\u2019s any failed job we can investigate.The `payments` service deployment to `prod` failed.  \nLet\u2019s pull the logs for the failed job (`job-789`) to find out what went wrong.The deployment to `prod` for the **payments** service failed because the new pods never became ready during rollout.\n\nHere\u2019s what happened:\n- The container image pulled and deployed fine initially.\n- During rollout, a pod (`payments-api-...`) failed its **readiness health checks**.\n- Kubernetes kept waiting for the pod to be healthy, but it never passed the probe.\n- After 120 seconds, the deployment timed out and Helm marked it as failed.\n\nIn plain terms: the new version started but couldn\u2019t pass its startup/health test, so the system aborted the rollout.\n\n**Suggested next steps:**\n1. Check the pod's application logs to see why readiness probes failed (e.g., DB connection issues, misconfig).\n2. Verify cluster/node health \u2014 sometimes resources or networking issues cause probes to fail.\n3. Review the readiness probe configuration to ensure it matches the app's startup behavior.\n\nDo you want me to fetch the pod logs so we can see exactly why it failed the health check?",
+    "timestamp": "2025-12-09T12:04:02.033854"
+  }
+]

@@ -1,0 +1,55 @@
+[
+    {
+        "query": "What's the status of the payments service in production?",
+        "expected_tools": [
+            "get_pipeline_status"
+        ],
+        "expected_tool_args": {
+            "service": "payments",
+            "environment": "prod"
+        }
+    },
+    {
+        "query": "Why did the payments deployment to prod fail?",
+        "expected_tools": [
+            "get_pipeline_status",
+            "get_job_logs"
+        ],
+        "expected_tool_args": {
+            "service": "payments",
+            "environment": "prod",
+            "job_id": "job-789"
+        }
+    },
+    {
+        "query": "Can you show me the logs for job-789?",
+        "expected_tools": [
+            "get_job_logs"
+        ],
+        "expected_tool_args": {
+            "job_id": "job-789"
+        }
+    },
+    {
+        "query": "What happened with the checkout service deployment in production?",
+        "expected_tools": [
+            "get_pipeline_status"
+        ],
+        "expected_tool_args": {
+            "service": "checkout",
+            "environment": "prod"
+        }
+    },
+    {
+        "query": "Check the status of payments prod and tell me what went wrong",
+        "expected_tools": [
+            "get_pipeline_status",
+            "get_job_logs"
+        ],
+        "expected_tool_args": {
+            "service": "payments",
+            "environment": "prod",
+            "job_id": "job-789"
+        }
+    }
+]
